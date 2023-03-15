@@ -65,12 +65,12 @@ elif choice == 2:
     print("\n\n--------------------------  Installing Packages ---------------------------")
     
     print("\n-> Openai\n")
-    # try: os.system('pip install openai')
-    # except: pass
+    try: os.system('pip install openai')
+    except: pass
 
     print("\n------------------------ Creating System Vars -------------------------------\n")
 
-    API_KEY = input("Enter API Key for Chat GPT : \nGet at : https://platform.openai.com/account/api-keys  \n > ").strip()
+    API_KEY = input("Enter API Key for Chat GPT : \n\nGet at : https://platform.openai.com/account/api-keys  \n > ").strip()
 
     SYSTEM_VARS = {
         "API_KEY" : API_KEY
