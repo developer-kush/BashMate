@@ -83,15 +83,22 @@ elif choice == 2:
         "CHATS" : set()
     }
 
+    files = os.listdir(PATH+"Wiz_Chats/")
+    for file in files: SYSTEM_VARS["CHATS"].add(file[:-4])
+
+    print("\nChat files Loaded Successfully")
+
     if os.path.exists(PATH+"Wizard.bin"):
-        if input("") in 'yes': 
+        choice = input("\nSystem Vars already exists, RECREATE ? [y/n] : ")
+        if choice and choice in 'yes': 
             with open(PATH+'Wizard.bin','wb+') as f:
                 pickle.dump(SYSTEM_VARS, f)
-                print("System Vars Created")
+                print("\n System Vars Created")
+        else: print("\nSystem Vars not Created")
     else:
         with open(PATH+'Wizard.bin','wb+') as f:
             pickle.dump(SYSTEM_VARS, f)
-            print("System Vars Created")
+            print("\n System Vars Created")
 
 
 else:
