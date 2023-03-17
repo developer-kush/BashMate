@@ -128,8 +128,7 @@ class Interactor(Cmd):
             else: 
                 print(f"\n{F.CYAN} ",wrap("  ".join(SYS_INFO["CHATS"]))+'\n')
                 name = input(f"{F.WHITE}?  Which chat to remove : ")
-            print(f"\n{F.YELLOW}? Are you sure want to remove {F.CYAN}{name}{F.YELLOW}? [y/n] : ")
-            if input().lower() not in 'yes': print(f"\n{F.GREEN}  Cancelled")
+            if input(f"\n{F.YELLOW}? Are you sure want to remove {F.CYAN}{name}{F.YELLOW}? [y/n] : ").lower() not in 'yes': print(f"\n{F.GREEN}  Cancelled")
         except Exception: print(f"{F.RED} Error Occured"); return 
         try:
             SYS_INFO["CHATS"].remove(name)
@@ -151,9 +150,13 @@ class Interactor(Cmd):
                     model=self.model, messages = GLOBALSTATE.messages
                 )
             except openai.error.APIConnectionError as e:
+                GLOBALSTATE.messages.pop()
                 print(F.RED+"\nX Connection Could not be Established"); return
             except openai.error.RateLimitError as e:
+                GLOBALSTATE.messages.pop()
                 print(F.RED + f"\n X Rate Limit Exceeded : {F.CYAN}Consider upgrading your API key"); return
+            except KeyboardInterrupt:
+                GLOBALSTATE.messages.pop()
             reply = wrap(chat.choices[0].message.content.lstrip())
             GLOBALSTATE.messages.append({"role": "assistant", "content": reply})
             print("\n"+f"{F.LIGHTBLUE_EX + REV + BOLD} NEBULA {NORM + BOLD} >\n\n  "+ reply)
@@ -168,8 +171,8 @@ def save_chat(name, messages):
             pickle.dump(SYS_INFO, f)
         with open(PATH+f"Wiz_Chats/{name}.bin","wb+") as f:
             pickle.dump(messages,f)
-            print("\nChat saved Successfully.\n")
-    except Exception as e: print("Chat could not be saved, Retry\n")
+            print(f"\n{F.YELLOW}  Chat saved Successfully.\n")
+    except Exception as e: print(f"\n{F.RED}  Chat could not be saved, Retry\n")
 
 def take_name():
     name = input(f"\n {F.BLUE}> Name for the chat (Max 50 chars): ").strip().lower().replace(' ', '_')
