@@ -94,7 +94,7 @@ class Manager(Cmd):
         if not WSPACES: print('No Workspaces created')
         else:
             print()
-            for i in WSPACES: print('- '+BOLD+F.BLUE+ i.ljust(15), "  :  ", WSPACES[i],sep = "")
+            for i in sorted(WSPACES.keys(), key = lambda x: WSPACES[x]): print('- '+BOLD+F.BLUE+ i.ljust(15), "  :  ", WSPACES[i],sep = "")
 
     def do_add(self, *args):
         try:
@@ -191,7 +191,7 @@ class Manager(Cmd):
     do_close = do_exit
 
     def default(self, line):
-        if line == "EOF": os.system(CLEAR); quit()
+        if line == "EOF": os.system(CLEAR); updatedb() ;quit()
         print(f'\n{BOLD + F.RED}X Command {F.CYAN+line+F.RED} not available\n  {F.CYAN}SUGGEST HERE : {NORM + F.WHITE}https://github.com/developer-kush')
   
     def do_help(self, arg):

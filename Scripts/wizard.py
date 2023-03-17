@@ -1,8 +1,8 @@
 from cmd import Cmd
 import openai 
 import os
-from dotenv import load_dotenv
 import shutil
+from dataclasses import dataclass
 import textwrap
 import pickle
 
@@ -21,6 +21,7 @@ if CLEAR == 'c': exit()
 
 if os.name == 'posix': DATAPATH = f"/home/{os.getlogin()}/.custom_script_data/Wizard.bin"
 else: DATAPATH = f"C:/Users/{os.getlogin()}/.custom_script_data/Wizard.bin"
+PATH = DATAPATH[:-10]
 
 try:
     with open(DATAPATH,'rb+') as f:
@@ -30,6 +31,11 @@ except:
     exit()
 
 openai.api_key = SYS_INFO['API_KEY']
+
+@dataclass
+class GLOBALSTATE:
+    loaded = None
+    messages = []
 
 # -------------------------------------------------------------------------------------
 
@@ -59,14 +65,17 @@ def wrap(text):
         res.append('\n  '.join(WRAPPEROBJECT.wrap(line)))
     return '\n  '.join(res)
 
+def TAB_COMPLETER_CHATNAMES(self, text, line, begidx, endidx):
+    if text: return [i for i in SYS_INFO["CHATS"] if i.startswith(text)]
+    else: return list(SYS_INFO["CHATS"])
+
 class Interactor(Cmd):
 
     intro = Banner
     prompt = f" \n{F.RED+REV+BOLD} {USERNAME} {NORM}{BOLD} >{F.GREEN} \n\n"+'  '
 
-    def __init__(self, messages):
+    def __init__(self):
         super().__init__()
-        self.messages = messages
         self.model = "gpt-3.5-turbo"
         self.mode = "chat"
 
@@ -75,49 +84,119 @@ class Interactor(Cmd):
         os.system(CLEAR)
         print(self.intro)
     do_clear = do_cls
+
+    def do_cload(self, args):
+        """Loads a chat session"""
+        args = args.split()
+        try:
+            if not args:
+                print(f"\n{F.CYAN} ",wrap("  ".join(SYS_INFO["CHATS"]))+'\n')
+                name = input(f"{F.WHITE}  Which chat to load : ").lower().replace(" ", "_")
+            else: name = args[0].lower().replace(" ", "_")
+        except EOFError as e: print(f"\n\n{F.RED}  Chat could not be Loaded"); return
+        except KeyboardInterrupt as e: print(f"\n{F.RED}  Chat could not be Loaded"); return
+        try:
+            with open(PATH+f"Wiz_Chats/{name}.bin", "rb+") as f:
+                GLOBALSTATE.messages = pickle.load(f)
+                GLOBALSTATE.loaded = name
+                print("> Messages loaded Successfully")
+        except Exception as e: print(f"\n{F.RED}X File not Found"); return
+        os.system(CLEAR)
+        print(self.intro)
+        for message in GLOBALSTATE.messages:
+            if message["role"] == "system": continue
+            elif message["role"] == "user":
+                print(f" \n{F.RED+REV+BOLD} {USERNAME} {NORM}{BOLD} >{F.GREEN} \n\n"+'  ')
+                print("",wrap(message["content"]))
+            else:
+                print("\n"+f"{F.LIGHTBLUE_EX + REV + BOLD} NEBULA {NORM + BOLD} >\n\n  "+ wrap(message["content"]))
+    complete_cload = TAB_COMPLETER_CHATNAMES
+
+    def do_csave(self, args):
+        """Saves the current chat session"""
+        args = args.split()
+        if args: name = args[0]
+        elif GLOBALSTATE.loaded is None: name = take_name()
+        else: name = GLOBALSTATE.loaded
+        save_chat(name, GLOBALSTATE.messages)
+
+    def do_crm(self, args):
+        """Removes a chat session"""
+        args = args.split()
+        try :
+            if args: name = args[0]
+            else: 
+                print(f"\n{F.CYAN} ",wrap("  ".join(SYS_INFO["CHATS"]))+'\n')
+                name = input(f"{F.WHITE}?  Which chat to remove : ")
+            print(f"\n{F.YELLOW}? Are you sure want to remove {F.CYAN}{name}{F.YELLOW}? [y/n] : ")
+            if input().lower() not in 'yes': print(f"\n{F.GREEN}  Cancelled")
+        except Exception: print(f"{F.RED} Error Occured"); return 
+        try:
+            SYS_INFO["CHATS"].remove(name)
+            with open(PATH + "Wizard.bin", "wb+") as f:
+                pickle.dump(SYS_INFO, f)
+            os.remove(PATH+f"Wiz_Chats/{name}.bin")
+            print(f"\n{F.RED}  Chat session removed successfully")
+        except FileNotFoundError as e: print(f"\n{F.RED}  Chat session does not exist")
+        except KeyError as e: print(f"{F.RED}X Chat could not be removed")
+    complete_crm = TAB_COMPLETER_CHATNAMES
     
     def default(self, line):
         """Chats with OpenAi models"""
         if line == "EOF": raise KeyboardInterrupt()
-
         if self.mode == "chat":
-            messages.append({"role": "user", "content": line})
-
+            GLOBALSTATE.messages.append({"role": "user", "content": line})
             try:
                 chat = openai.ChatCompletion.create(
-                    model=self.model, messages = messages
+                    model=self.model, messages = GLOBALSTATE.messages
                 )
             except openai.error.APIConnectionError as e:
                 print(F.RED+"\nX Connection Could not be Established"); return
             except openai.error.RateLimitError as e:
                 print(F.RED + f"\n X Rate Limit Exceeded : {F.CYAN}Consider upgrading your API key"); return
             reply = wrap(chat.choices[0].message.content.lstrip())
-            messages.append({"role": "assistant", "content": reply})
+            GLOBALSTATE.messages.append({"role": "assistant", "content": reply})
             print("\n"+f"{F.LIGHTBLUE_EX + REV + BOLD} NEBULA {NORM + BOLD} >\n\n  "+ reply)
     
-    def do_exit(self, arg): raise KeyboardInterrupt()
+    def do_exit(self, args):"""Exits the Tool"""; raise KeyboardInterrupt()
 
-def save_chat(messages):
-    print(f"\n{F.RED} X This Feature will {F.YELLOW}SOON{F.RED} be added")
-    return
+def save_chat(name, messages):
+    # print(f"\n{F.RED} X This Feature will {F.YELLOW}SOON{F.RED} be added")
+    SYS_INFO['CHATS'].add(name)
+    try:
+        with open(PATH+f"Wizard.bin","wb+") as f:
+            pickle.dump(SYS_INFO, f)
+        with open(PATH+f"Wiz_Chats/{name}.bin","wb+") as f:
+            pickle.dump(messages,f)
+            print("\nChat saved Successfully.\n")
+    except Exception as e: print("Chat could not be saved, Retry\n")
+
+def take_name():
+    name = input(f"\n {F.BLUE}> Name for the chat (Max 50 chars): ").strip().lower().replace(' ', '_')
+    while len(name)>50 and os.path.exists(PATH+f"Wiz_Chats/{name}.bin"):
+        name = input("\nName already exists. Write a valid name : ").strip().lower().replace(' ', '_')
+    return name
 
 if __name__ == '__main__':
 
-    messages = [{"role":"system","content":"Your are Doby. You extensively use emojis in your messages to make them more expressive."}]
+    GLOBALSTATE.messages = [{"role":"system","content":"Your are Doby. You extensively use emojis in your messages to make them more expressive."}]
 
     try:
-        interactor = Interactor(messages)
+        interactor = Interactor()
         interactor.cmdloop()
     except KeyboardInterrupt as e:
         try:
-            save = input(f"\n\n {F.RED}> Do you want to save the chat? [y/n] : ").lower()
-            if save in 'yes':
-                name = input(f"\n {F.BLUE}> Enter a name for the chat : ")
-                save_chat(messages)
-                input('\nPress Enter to Continue ...')
+            if GLOBALSTATE.loaded is not None:
+                save_chat(GLOBALSTATE.loaded, GLOBALSTATE.messages)
+                print(f'Chat Saved Successfully : {GLOBALSTATE.loaded}')
+            elif len(GLOBALSTATE.messages) >= 3:
+                save = input(f"\n\n {F.RED}> Do you want to save the chat? [y/n] : ").lower()
+                if save in 'yes':
+                    name = take_name()
+                    save_chat(name, GLOBALSTATE.messages)
         except EOFError as e: pass
         except KeyboardInterrupt as e: pass
         os.system(CLEAR)
-        exit()
     except ModuleNotFoundError as e:
         print(F.RED+f"\n X Module Not Found : {F.CYAN}Consider pip installing unavaillable modules")
+
