@@ -1,2 +1,11 @@
 # Testing
 *test*.py
+
+# Build Folder
+Bash_Mate.egg-info
+build/
+dist/
+*.spec
+
+# Cache
+__pycache__

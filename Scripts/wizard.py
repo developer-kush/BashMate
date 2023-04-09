@@ -2,13 +2,12 @@ from cmd import Cmd
 import openai 
 import os
 import shutil
-from dataclasses import dataclass
+# from dataclasses import dataclass
 import textwrap
 import pickle
+from colorama import Fore as F, Style as S
 
 cols, rows = shutil.get_terminal_size()
-
-from colorama import Fore as F, Style as S
 
 BOLD = '\033[1m'
 NORM = '\033[0m'
@@ -30,10 +29,8 @@ except:
     print("\n\nX Error in Reading System Settings")
     exit()
 
-openai.api_key = SYS_INFO['API_KEY']
-
-@dataclass
 class GLOBALSTATE:
+    realstate = []
     loaded = None
     messages = []
 
@@ -55,6 +52,8 @@ BANNER = [
 Banner = '\n\n' + ('\n'.join([i.center(cols+10," ")[:-10] for i in BANNER])) + '\n\n' + f"{BOLD + S.BRIGHT + F.CYAN}Wizard {F.RED}NEBULA{F.RESET}, {F.LIGHTBLUE_EX}Beholder{F.RESET} of the {F.CYAN}Answers".center(cols+40," ")
 
 USERNAME = os.getlogin().upper()
+
+CHATS_PATH = PATH + "Wiz_Chats/"
 
 
 WRAPPEROBJECT = textwrap.TextWrapper(width=cols-5)
@@ -78,6 +77,7 @@ class Interactor(Cmd):
         super().__init__()
         self.model = "gpt-3.5-turbo"
         self.mode = "chat"
+        openai.api_key = SYS_INFO['API_KEY']
 
     def do_cls(self, args):
         """Clears the screen"""
@@ -90,7 +90,8 @@ class Interactor(Cmd):
         args = args.split()
         try:
             if not args:
-                print(f"\n{F.CYAN} ",wrap("  ".join(SYS_INFO["CHATS"]))+'\n')
+                if not len(os.listdir(CHATS_PATH)): print(f"\n{F.RED}  No Chats Saved"); return
+                print(f"\n{F.CYAN} ",wrap("  ".join(list_chats()))+'\n')
                 name = input(f"{F.WHITE}  Which chat to load : ").lower().replace(" ", "_")
             else: name = args[0].lower().replace(" ", "_")
         except EOFError as e: print(f"\n\n{F.RED}  Chat could not be Loaded"); return
@@ -126,20 +127,18 @@ class Interactor(Cmd):
         try :
             if args: name = args[0]
             else: 
-                print(f"\n{F.CYAN} ",wrap("  ".join(SYS_INFO["CHATS"]))+'\n')
+                if not len(os.listdir(CHATS_PATH)):  print(f"\n{F.RED}  No Chats Saved"); return
+                print(f"\n{F.CYAN} ",wrap("  ".join(list_chats()))+'\n')
                 name = input(f"{F.WHITE}?  Which chat to remove : ")
             if input(f"\n{F.YELLOW}? Are you sure want to remove {F.CYAN}{name}{F.YELLOW}? [y/n] : ").lower() not in 'yes': print(f"\n{F.GREEN}  Cancelled")
         except Exception: print(f"{F.RED} Error Occured"); return 
         try:
-            SYS_INFO["CHATS"].remove(name)
-            with open(PATH + "Wizard.bin", "wb+") as f:
-                pickle.dump(SYS_INFO, f)
             os.remove(PATH+f"Wiz_Chats/{name}.bin")
             print(f"\n{F.RED}  Chat session removed successfully")
         except FileNotFoundError as e: print(f"\n{F.RED}  Chat session does not exist")
         except KeyError as e: print(f"{F.RED}X Chat could not be removed")
     complete_crm = TAB_COMPLETER_CHATNAMES
-    
+
     def default(self, line):
         """Chats with OpenAi models"""
         if line == "EOF": raise KeyboardInterrupt()
@@ -155,16 +154,27 @@ class Interactor(Cmd):
             except openai.error.RateLimitError as e:
                 GLOBALSTATE.messages.pop()
                 print(F.RED + f"\n X Rate Limit Exceeded : {F.CYAN}Consider upgrading your API key"); return
-            except KeyboardInterrupt:
+            except openai.error.InvalidRequestError as e:
+                if str(e).startswith("This model's maximum context length is"):
+                    for _ in range(4):
+                        GLOBALSTATE.messages.pop(1)
+                        GLOBALSTATE.messages.pop(1)
                 GLOBALSTATE.messages.pop()
+                self.default(line)
+            except KeyboardInterrupt: 
+                GLOBALSTATE.messages.pop()
+                return 
+
+
             reply = wrap(chat.choices[0].message.content.lstrip())
             GLOBALSTATE.messages.append({"role": "assistant", "content": reply})
             print("\n"+f"{F.LIGHTBLUE_EX + REV + BOLD} NEBULA {NORM + BOLD} >\n\n  "+ reply)
     
     def do_exit(self, args):"""Exits the Tool"""; raise KeyboardInterrupt()
 
+# --------------------------------------- Util Functions --------------------------------------
+
 def save_chat(name, messages):
-    # print(f"\n{F.RED} X This Feature will {F.YELLOW}SOON{F.RED} be added")
     SYS_INFO['CHATS'].add(name)
     try:
         with open(PATH+f"Wizard.bin","wb+") as f:
@@ -176,12 +186,17 @@ def save_chat(name, messages):
 
 def take_name():
     name = input(f"\n {F.BLUE}> Name for the chat (Max 50 chars): ").strip().lower().replace(' ', '_')
-    while len(name)>50 and os.path.exists(PATH+f"Wiz_Chats/{name}.bin"):
+    while name == "" or len(name)>50 and os.path.exists(PATH+f"Wiz_Chats/{name}.bin"):
         name = input("\nName already exists. Write a valid name : ").strip().lower().replace(' ', '_')
     return name
 
-if __name__ == '__main__':
+def list_chats():
+    chats = os.listdir(CHATS_PATH)
+    return [x[:-4] for x in chats]
 
+# ------------------------------------------ Main ------------------------------------------------
+
+def main():
     GLOBALSTATE.messages = [{"role":"system","content":"Your are Doby. You extensively use emojis in your messages to make them more expressive."}]
 
     try:
@@ -203,3 +218,4 @@ if __name__ == '__main__':
     except ModuleNotFoundError as e:
         print(F.RED+f"\n X Module Not Found : {F.CYAN}Consider pip installing unavaillable modules")
 
+if __name__ == '__main__': main()

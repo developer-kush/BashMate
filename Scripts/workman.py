@@ -35,7 +35,7 @@ def updatedb():
         print(e.__traceback__) 
 
 WSPACES = SYSTEM_VARS['WSPACES']
-aliases = SYSTEM_VARS['aliases']
+aliases = SYSTEM_VARS['ALIASES']
 
 # ---------------------------------------- System Vars ----------------------------------------
 
@@ -60,17 +60,13 @@ class Manager(Cmd):
                 ' ╚══╝╚══╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝',
         ]
 
-    # banner = [                                                                       
-    #     f"{BOLD + F.RED}@@@  @@@  @@@   @@@@@@   @@@@@@@   @@@  @@@  @@@@@@@@@@    @@@@@@   @@@  @@@",  
-    #     f"{BOLD + F.RED}@@@  @@@  @@@  @@@@@@@@  @@@@@@@@  @@@  @@@  @@@@@@@@@@@  @@@@@@@@  @@@@ @@@",  
-    #     f"{BOLD + F.RED}@@!  @@!  @@!  @@!  @@@  @@!  @@@  @@!  !@@  @@! @@! @@!  @@!  @@@  @@!@!@@@",  
-    #     f"{BOLD + F.RED}!@!  !@!  !@!  !@!  @!@  !@!  @!@  !@!  @!!  !@! !@! !@!  !@!  @!@  !@!!@!@!",  
-    #     f"{BOLD + F.RED}@!!  !!@  @!@  @!@  !@!  @!@!!@!   @!@@!@!   @!! !!@ @!@  @!@!@!@!  @!@ !!@!",  
-    #     f"{BOLD + F.RED}!@!  !!!  !@!  !@!  !!!  !!@!@!    !!@!!!    !@!   ! !@!  !!!@!!!!  !@!  !!!",  
-    #     f"{BOLD + F.RED}!!:  !!:  !!:  !!:  !!!  !!: :!!   !!: :!!   !!:     !!:  !!:  !!!  !!:  !!!",  
-    #     f"{BOLD + F.RED}:!:  :!:  :!:  :!:  !:!  :!:  !:!  :!:  !:!  :!:     :!:  :!:  !:!  :!:  !:!",  
-    #     f"{BOLD + F.RED} :::: :: :::   ::::: ::  ::   :::   ::  :::  :::     ::   ::   :::   ::   ::",  
-    #     f"{BOLD + F.RED}  :: :  : :     : :  :    :   : :   :   :::   :      :     :   : :  ::    : ",  
+    # banner = [
+    #     r" /\ \  __/\ \               /\ \      /'\_/`\                      ",
+    #     r" \\\ \/\ \\\ \    ___   _ __\ \ \/'\ /\      \     __      ___     ",
+    #     r"  \\\ \\\ \\\ \  / __`\/\`'__\ \ , < \ \ \__\ \  /'__`\  /' _ `\   ",
+    #     r"   \\\ \_/ \_\ \/\ \L\ \ \ \/ \ \ \\`\\ \ \_/\ \/\ \L\.\_/\ \/\ \  ",
+    #     r"    \\\ ___x___/\ \____/\ \_\  \ \_\ \_\ \_\\ \_\ \__/.\_\ \_\ \_\ ",
+    #     r"    '\\/==//==/  \/___/  \/_/   \/_/\/_/\/_/ \/_/\/__/\/_/\/_/\/_/ ",
     # ]
 
     # banner = [
@@ -89,12 +85,16 @@ class Manager(Cmd):
     def preloop(self):
         os.system(CLEAR)
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_ls(self, *args):
         'List the WorkSpaces'
         if not WSPACES: print('No Workspaces created')
         else:
             print()
             for i in sorted(WSPACES.keys(), key = lambda x: WSPACES[x]): print('- '+BOLD+F.BLUE+ i.ljust(15), "  :  ", WSPACES[i],sep = "")
+
+    # *-------------------------------------------------------------------------------------
 
     def do_add(self, *args):
         try:
@@ -110,8 +110,13 @@ class Manager(Cmd):
             print(f'\n{F.RED}> Invalid Arguments')
     
     def complete_add(self, text, line, begidx, endidx):
-        pass
+        if len(line.split()) != 3: return []
+        path = line.split()[2][:-len(text)]
+        if not path: return os.listdir(path)
+        return [f for f in os.listdir(path) if f.startswith(text)]
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_open(self, *args):
         'Opens a Workspace'
         if not args[0]: print(F.RED+"\n X Name not supplied"); return
@@ -130,6 +135,8 @@ class Manager(Cmd):
         else: completions = [ f for f in WSPACES.keys() if f.startswith(text) ]
         return completions
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_del(self, *args):
         '''Unregister a Workspace'''
         if not args[0]: print(F.RED+"\n X Name not supplied"); return
@@ -144,6 +151,8 @@ class Manager(Cmd):
             print(f"\n{F.RED}> Invalid Arguments")
     do_rm = do_del
 
+    # *-------------------------------------------------------------------------------------
+
     def do_run(self, *args):
         '''Run a workspace'''
         if not args[0]: print(F.RED+"\n X Name not supplied"); return
@@ -156,11 +165,15 @@ class Manager(Cmd):
         else: completions = [ f for f in WSPACES.keys() if f.startswith(text) ]
         return completions
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_cls(self, *args):
         '''Clears the terminal'''
         os.system(CLEAR)
         print(self.intro)
     do_clear = do_cls
+
+    # *-------------------------------------------------------------------------------------
 
     def do_chat(self,*args):
         '''Chat with ChatGPT'''
@@ -169,6 +182,8 @@ class Manager(Cmd):
         os.system(CLEAR)
         print(F.RESET+self.intro)
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_sys(self,*args):
         '''Interact with System Variables'''
         for key in SYSTEM_VARS:
@@ -182,6 +197,8 @@ class Manager(Cmd):
                     print(f"{BOLD+F.CYAN}      {i} : ", SYSTEM_VARS[key][i])
             else: print(SYSTEM_VARS[key])
 
+    # *-------------------------------------------------------------------------------------
+    
     def do_exit(self, *args):
         '''Close the Terminal'''
         updatedb()
@@ -190,10 +207,16 @@ class Manager(Cmd):
     do_quit = do_exit
     do_close = do_exit
 
+    # *-------------------------------------------------------------------------------------
+
     def default(self, line):
         if line == "EOF": os.system(CLEAR); updatedb() ;quit()
-        print(f'\n{BOLD + F.RED}X Command {F.CYAN+line+F.RED} not available\n  {F.CYAN}SUGGEST HERE : {NORM + F.WHITE}https://github.com/developer-kush')
-  
+        # try: os.system(line)
+        # except: 
+        print(f'\n{BOLD + F.RED}X Command {F.CYAN+line+F.RED} not available\n  {F.CYAN}SUGGEST HERE : {NORM + F.WHITE}https://github.com/developer-kush/CLI_Tools/issues/new')
+
+    # *-------------------------------------------------------------------------------------
+    
     def do_help(self, arg):
         commands = [
             ["ls", "Lists the currently monitored workspaces"],
@@ -215,7 +238,7 @@ class Manager(Cmd):
         print(f"\n  {BOLD+F.CYAN}"+ ", ".join(completables))
 
 
-if __name__ == '__main__':
+def main():
     try:
         manager = Manager()
         manager.cmdloop()
@@ -223,3 +246,5 @@ if __name__ == '__main__':
         updatedb()
         os.system(CLEAR)
         exit()
+
+if __name__ == '__main__': main()

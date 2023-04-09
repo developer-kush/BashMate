@@ -1,105 +1,51 @@
+from setuptools import setup, Command, find_packages
+from setuptools.command.install import install
 import os
-import pickle
+# import subprocess
 
-LINE = '\n\n-------------------------------------------------------------------------------------'
-BOLD = '\033[1m'
+package_data = {
+    '': ['*.png', '*.txt', '*.md', '*.py'],
+    'Scripts': ['*.py'],
+}
 
-SYSTEM = 'Win' if os.name == 'nt' else 'Linux' if os.name == 'posix' else 'Unknown'
-if SYSTEM == 'Unknown': print("\nOS not Supported\n"); quit()
+class Install(install):
 
-if SYSTEM == 'Win': PATH = f"C:/Users/{os.getlogin()}/.custom_script_data/"
-else: PATH = f"/home/{os.getlogin()}/.custom_script_data/"
+    def run(self):
+        install.run(self)
+        os.system('python3 setup.py bdist_wheel')
+        os.system('pip install dist/*.py')
+        os.system('python3 post_install.py')
 
-if SYSTEM == 'Linux' and not os.path.exists(f'/home/{os.getlogin()}/.custom_script_data'):
-    os.mkdir(f'/home/{os.getlogin()}/.custom_script_data')
-    print(f"\nCreated Folder : /home/{os.getlogin()}/.custom_script_data\n")
-elif SYSTEM == 'Win' and not os.path.exists(f'C:/Users/{os.getlogin()}/.custom_script_data'):
-    os.mkdir(f'C:/Users/{os.getlogin()}/.custom_script_data')
-    print(f"\nCreated Folder : C:/Users/{os.getlogin()}/.custom_script_data\n")
-else: print('\nStorage Folder Already Available\n')
+with open('README.md', 'r') as f:
+    long_desctiption = f.read()
 
-print("Installion Menu - ")
-print("1. WorkMan - (WorkMan is a CLI based WorkSpace and Task Manager)")
-print("2. Wizard - (Wizard is a CLI based OpenAI ChatBot)")
-choice = int(input("Select Option : "))
+from setuptools import setup, Command
+import os
 
-if choice == 1:
+setup(
+    name='BashMate',
+    version='0.1',
+    author='Kushagra Agarwal',
+    author_email='kushagra.agarwal.2709@gmail.com',
+    description='Developer focused Command Line Tools',
+    long_description=long_desctiption,
+    long_description_content_type='text/markdown',
+    packages= ['Scripts/'],
+    # package_data= package_data,
+    licence_files = ['LICENSE.txt'],
+    scripts=['Scripts/workman.py', 'Scripts/wizard.py', 'post_install.py'],
 
-    print(f"\n\n{BOLD}Initiating Installation for Workman...\033[0m")
+    install_requires=['colorama', 'openai'],
 
-    # ----------------------------------- SYSTEM VARS ------------------------------------
-    SYSTEM_VARS = {
-        "WSPACES" : {},
-        "aliases" : {},
-        "scripts" : {}
+    entry_points={
+        'console_scripts': [
+            'wm = workman:main',
+            'wiz = wizard:main',
+            'bashmate = post_install:post_install'
+        ],
+    },
+
+    cmdclass={
+        'install' : Install
     }
-
-    print("\n--------------------------  Installing Packages ---------------------------")
-    print("\n-> Python_Dotenv\n")
-    try: os.system('pip3 install python-dotenv')
-    except: pass
-
-    print(LINE)
-    print("\n-> Colorama\n")
-    try: os.system('pip3 install colorama')
-    except: pass
-
-
-    print("\n------------------------ Creating System Vars -----------------------------")
-
-    if os.path.exists(PATH+"WorkMan.bin"):
-        print("\nAlready Exists, Recreate ? [y/n]")
-        if input() in 'yes':
-            with open(PATH+"WorkMan.bin",'wb+') as f:
-                pickle.dump(SYSTEM_VARS, f)
-                print("\n  Created System Vars")
-    else:
-        with open(PATH+"WorkMan.bin",'wb+') as f:
-            pickle.dump(SYSTEM_VARS, f)
-            print("\n  Created System Vars")
-
-    print("Installation Done. Retry if there are installation issues.\n\n")
-
-elif choice == 2:
-
-    print(f"\n\n{BOLD}Initiating Installation for Wizard ...\n")
-
-    print("\n\n--------------------------  Installing Packages ---------------------------")
-    
-    print("\n-> Openai\n")
-    try: os.system('pip install openai')
-    except: pass
-
-    print("\n---------------------- Creating directories and System Vars ------------------\n")
-
-    if not os.path.exists(PATH+"Wiz_Chats/"):
-        os.mkdir(PATH+"Wiz_Chats/")
-        print("\nWiz Chats Directory Created\n")
-
-    API_KEY = input("Enter API Key for Chat GPT : \n\nGet at : https://platform.openai.com/account/api-keys  \n > ").strip()
-
-    SYSTEM_VARS = {
-        "API_KEY" : API_KEY,
-        "CHATS" : set()
-    }
-
-    files = os.listdir(PATH+"Wiz_Chats/")
-    for file in files: SYSTEM_VARS["CHATS"].add(file[:-4])
-
-    print("\nChat files Loaded Successfully")
-
-    if os.path.exists(PATH+"Wizard.bin"):
-        choice = input("\nSystem Vars already exists, RECREATE ? [y/n] : ")
-        if choice and choice in 'yes': 
-            with open(PATH+'Wizard.bin','wb+') as f:
-                pickle.dump(SYSTEM_VARS, f)
-                print("\n System Vars Created")
-        else: print("\nSystem Vars not Created")
-    else:
-        with open(PATH+'Wizard.bin','wb+') as f:
-            pickle.dump(SYSTEM_VARS, f)
-            print("\n System Vars Created")
-
-
-else:
-    print("Invalid Option")
+)
